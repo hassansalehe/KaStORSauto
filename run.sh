@@ -67,6 +67,6 @@ cd ..
 
 echo -e "${colorSt}@KaStORSauto ===== Running the Benchmarks =====\033[m"
 cd $home
-tests/test-harness.sh
+tests/test-harness.sh -x archer
 
 echo -e "${colorSt}@KaStORSauto ===== End =====\033[m"

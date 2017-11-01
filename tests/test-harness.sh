@@ -118,14 +118,14 @@ else
 fi
 
 if [[ ! ${#DATASET_SIZES[@]} -gt 0 ]]; then
-  echo "Default dataset sizes will be used: 32, 64, 128, 256, 512, 1024."
+  echo "Default dataset sizes will be used: 16, 32, 64, 128."
   DATASET_SIZES=('16' '32' '64' '128')
 else
   echo "Dataset sizes: ${DATASET_SIZES[*]}";
 fi
 
 if [[ ! ${#THREADLIST[@]} -gt 0 ]]; then
-  echo "Default thread counts will be used: 3, 36, 45, 72, 90, 180, 256."
+  echo "Default thread counts will be used: 3, 12, 24."
   THREADLIST=('3' '12' '24')
 else
   echo "Thread counts: ${THREADLIST[*]}";
