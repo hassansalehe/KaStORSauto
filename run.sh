@@ -66,10 +66,7 @@ make dgeqrf_taskdep
 cd ..
 
 echo -e "${colorSt}@KaStORSauto ===== Running the Benchmarks =====\033[m"
-strassen/strassen_taskdep
-jacobi/jacobi_taskdep
-sparselu/sparselu_taskdep
-plasma/dgetrf_taskdep
-plasma/dgeqrf_taskdep
+cd $home
+tests/test-harness.sh
 
 echo -e "${colorSt}@KaStORSauto ===== End =====\033[m"

@@ -25,4 +25,5 @@ The `run.sh` file contains the script to perform the following tasks
 ## License and Copyright
 See the license file [LICENSE.md](
 https://github.com/hassansalehe/KaStORSauto/blob/master/LICENSE.md)
-for more information.
+for more information. The script in `tests/` was taken from the
+[DataRaceBench](https://github.com/LLNL/dataracebench) and its license is maintained in the file.
