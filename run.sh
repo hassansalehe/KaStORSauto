@@ -49,17 +49,27 @@ cd $home && rm -rf build
 mkdir build && cd build
 
 echo -e "${colorSt}@KaStORSauto ===== Configuring for KaStORS apps=====\033[m"
-$home/kastors/configure CC="clang-archer"
+$home/kastors/configure CC="clang-archer" --with-blas="/usr/lib/libcblas.a /usr/lib/libatlas.a"
 
 echo -e "${colorSt}@KaStORSauto ===== Compiling OpenMP dependence task benchmarks =====\033[m"
 cd strassen
 make strassen_taskdep
 cd - && cd jacobi
 make jacobi_taskdep
+
+cd - && cd sparselu
+make sparselu_taskdep
+
+cd - && cd plasma
+make dgetrf_taskdep
+make dgeqrf_taskdep
 cd ..
 
 echo -e "${colorSt}@KaStORSauto ===== Running the Benchmarks =====\033[m"
 strassen/strassen_taskdep
 jacobi/jacobi_taskdep
+sparselu/sparselu_taskdep
+plasma/dgetrf_taskdep
+plasma/dgeqrf_taskdep
 
 echo -e "${colorSt}@KaStORSauto ===== End =====\033[m"

@@ -20,4 +20,9 @@ The `run.sh` file contains the script to perform the following tasks
 * [Git](https://git-scm.com/download/linux).
 * [LLVM/Clang](https://llvm.org).
 * [Archer](https://github.com/PRUNERS/archer), OpenMP race detection tool.
+* The libcblas library. In Ubuntu you can install with `sudo apt install libatlas-base-dev`
 
+## License and Copyright
+See the license file [LICENSE.md](
+https://github.com/hassansalehe/KaStORSauto/blob/master/LICENSE.md)
+for more information.
