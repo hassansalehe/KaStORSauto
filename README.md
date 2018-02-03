@@ -20,7 +20,8 @@ The `run.sh` file contains the script to perform the following tasks
 * [Git](https://git-scm.com/download/linux).
 * [LLVM/Clang](https://llvm.org).
 * [Archer](https://github.com/PRUNERS/archer), OpenMP race detection tool.
-* The `libcblas` library. In Ubuntu you can install with `sudo apt install libatlas-base-dev`
+* The `libcblas` library. In Ubuntu you can install with `sudo apt install libatlas-base-dev libblas-dev liblapack-dev`
+* The `liblapacke`  library, installation: `sudo apt-get install liblapacke-dev`
 * [Autoconf](http://www.gnu.org/software/autoconf/autoconf.html), you can install it with `sudo apt-get install autoconf`
 
 ## License and Copyright
