@@ -1,0 +1,794 @@
+diff --git a/jacobi/include/poisson.h b/jacobi/include/poisson.h
+index 21d5bfa..f05044a 100644
+--- a/jacobi/include/poisson.h
++++ b/jacobi/include/poisson.h
+@@ -55,43 +55,43 @@
+   estimate on iteration ITOLD.  On output, the solution estimate on
+   iteration ITNEW.
+ */
+-void sweep(int nx, int ny, double dx, double dy, double *f,
+-	   int itold, int itnew, double *u, double *unew, int block_size);
+-void sweep_seq(int nx, int ny, double dx, double dy, double *f,
+-	   int itold, int itnew, double *u, double *unew);
++void sweep(int nx, int ny, double dx, double dy, double **f,
++	   int itold, int itnew, double **u, double **unew, int block_size);
++void sweep_seq(int nx, int ny, double dx, double dy, double **f,
++	   int itold, int itnew, double **u, double **unew);
+ 
+ 
+-static inline void copy_block(int nx, int ny, int block_x, int block_y, double *u_, double *unew_, int block_size) {
++static inline void copy_block(int nx, int ny, int block_x, int block_y, double **u_, double **unew_, int block_size) {
+     int i, j, start_i, start_j;
+-    double (*u)[nx][ny] = (double (*)[nx][ny])u_;
+-    double (*unew)[nx][ny] = (double (*)[nx][ny])unew_;
+     start_i = block_x * block_size;
+     start_j = block_y * block_size;
++		double ** u = u_;
++		double ** unew = unew_;
+     for (i = start_i; i < start_i + block_size; i++) {
+         for (j = start_j; j < start_j + block_size; j++) {
+             assert((i < nx) && (j < ny));
+-            (*u)[i][j] = (*unew)[i][j];
++            u[i][j] = unew[i][j];
+         }
+     }
+ }
+ 
+-static inline void compute_estimate(int block_x, int block_y, double *u_,
+-                                    double *unew_, double *f_, double dx,
++static inline void compute_estimate(int block_x, int block_y, double **u_,
++                                    double **unew_, double **f_, double dx,
+                                     double dy, int nx, int ny, int block_size) {
+     int i, j, start_i, start_j;
+-    double (*f)[nx][ny] = (double (*)[nx][ny])f_;
+-    double (*u)[nx][ny] = (double (*)[nx][ny])u_;
+-    double (*unew)[nx][ny] = (double (*)[nx][ny])unew_;
++    double **f = f_;
++    double **u = u_;
++    double **unew = unew_;
+     start_i = block_x * block_size;
+     start_j = block_y * block_size;
+     for (i = start_i; i < start_i + block_size; i++) {
+         for (j = start_j; j < start_j + block_size; j++) {
+             if (i == 0 || j == 0 || i == nx - 1 || j == ny - 1) {
+-                (*unew)[i][j] = (*f)[i][j];
++                unew[i][j] = f[i][j];
+             } else {
+-                (*unew)[i][j] = 0.25 * ((*u)[i-1][j] + (*u)[i][j+1]
+-                                      + (*u)[i][j-1] + (*u)[i+1][j]
+-                                      + (*f)[i][j] * dx * dy);
++                unew[i][j] = 0.25 * (u[i-1][j] + u[i][j+1]
++                                      + u[i][j-1] + u[i+1][j]
++                                      + f[i][j] * dx * dy);
+             }
+         }
+     }
+diff --git a/jacobi/src/jacobi-block-for.c b/jacobi/src/jacobi-block-for.c
+index 89d1d0b..e551830 100644
+--- a/jacobi/src/jacobi-block-for.c
++++ b/jacobi/src/jacobi-block-for.c
+@@ -1,8 +1,8 @@
+ # include "poisson.h"
+ 
+ /* #pragma omp task/taskwait version of SWEEP. */
+-void sweep (int nx, int ny, double dx, double dy, double *f_,
+-        int itold, int itnew, double *u_, double *unew_, int block_size)
++void sweep (int nx, int ny, double dx, double dy, double **f_,
++        int itold, int itnew, double **u_, double **unew_, int block_size)
+ {
+     int it;
+     int block_x, block_y;
+diff --git a/jacobi/src/jacobi-block-task-dep.c b/jacobi/src/jacobi-block-task-dep.c
+index 3c4c87e..b44d728 100644
+--- a/jacobi/src/jacobi-block-task-dep.c
++++ b/jacobi/src/jacobi-block-task-dep.c
+@@ -1,14 +1,14 @@
+ # include "poisson.h"
+ 
+ /* #pragma omp task/taskwait version of SWEEP. */
+-void sweep (int nx, int ny, double dx, double dy, double *f_,
+-        int itold, int itnew, double *u_, double *unew_, int block_size)
++void sweep (int nx, int ny, double dx, double dy, double **f_,
++        int itold, int itnew, double **u_, double **unew_, int block_size)
+ {
+     int it;
+ #ifdef _OPENMP
+-    double (*f)[nx][ny] = (double (*)[nx][ny])f_;
+-    double (*u)[nx][ny] = (double (*)[nx][ny])u_;
+-    double (*unew)[nx][ny] = (double (*)[nx][ny])unew_;
++    double **f = f_;
++    double **u = u_;
++    double **unew = unew_;
+ #endif
+     int block_x, block_y;
+ 
+diff --git a/jacobi/src/jacobi-block-task.c b/jacobi/src/jacobi-block-task.c
+index a4919ce..1f05746 100644
+--- a/jacobi/src/jacobi-block-task.c
++++ b/jacobi/src/jacobi-block-task.c
+@@ -1,8 +1,8 @@
+ # include "poisson.h"
+ 
+ /* #pragma omp task/taskwait version of SWEEP. */
+-void sweep (int nx, int ny, double dx, double dy, double *f_,
+-            int itold, int itnew, double *u_, double *unew_, int block_size)
++void sweep (int nx, int ny, double dx, double dy, double **f_,
++            int itold, int itnew, double **u_, double **unew_, int block_size)
+ {
+     int it;
+     int block_x, block_y;
+diff --git a/jacobi/src/jacobi-seq.c b/jacobi/src/jacobi-seq.c
+index 5243373..50e47fd 100644
+--- a/jacobi/src/jacobi-seq.c
++++ b/jacobi/src/jacobi-seq.c
+@@ -1,32 +1,27 @@
+ # include "poisson.h"
+ 
+-void sweep_seq(int nx, int ny, double dx, double dy, double *f_,
+-        int itold, int itnew, double *u_, double *unew_)
++void sweep_seq(int nx, int ny, double dx, double dy, double **f,
++        int itold, int itnew, double **u, double **unew)
+ {
+     int i;
+     int it;
+     int j;
+-    double (*f)[nx][ny] = (double (*)[nx][ny])f_;
+-    double (*u)[nx][ny] = (double (*)[nx][ny])u_;
+-    double (*unew)[nx][ny] = (double (*)[nx][ny])unew_;
+-
+     for (it = itold + 1; it <= itnew; it++) {
+         for (i = 0; i < nx; i++) {
+             for (j = 0; j < ny; j++) {
+-                (*u)[i][j] = (*unew)[i][j];
++                u[i][j] = unew[i][j];
+             }
+         }
+         for (i = 0; i < nx; i++) {
+             for (j = 0; j < ny; j++) {
+                 if (i == 0 || j == 0 || i == nx - 1 || j == ny - 1) {
+-                    (*unew)[i][j] = (*f)[i][j];
++                    unew[i][j] = f[i][j];
+                 } else {
+-                    (*unew)[i][j] = 0.25 * ((*u)[i-1][j] + (*u)[i][j+1]
+-                            + (*u)[i][j-1] + (*u)[i+1][j]
+-                            + (*f)[i][j] * dx * dy);
++                    unew[i][j] = 0.25 * (u[i-1][j] + u[i][j+1]
++                            + u[i][j-1] + u[i+1][j]
++                            + f[i][j] * dx * dy);
+                 }
+             }
+         }
+     }
+ }
+-
+diff --git a/jacobi/src/jacobi-task-dep.c b/jacobi/src/jacobi-task-dep.c
+index d35f865..e60c5e2 100644
+--- a/jacobi/src/jacobi-task-dep.c
++++ b/jacobi/src/jacobi-task-dep.c
+@@ -1,15 +1,15 @@
+ # include "poisson.h"
+ 
+ /* #pragma omp task depend version of SWEEP. */
+-void sweep (int nx, int ny, double dx, double dy, double *f_,
+-        int itold, int itnew, double *u_, double *unew_, int block_size)
++void sweep (int nx, int ny, double dx, double dy, double **f_,
++        int itold, int itnew, double **u_, double **unew_, int block_size)
+ {
+     int i;
+     int it;
+     int j;
+-    double (*f)[nx][ny] = (double (*)[nx][ny])f_;
+-    double (*u)[nx][ny] = (double (*)[nx][ny])u_;
+-    double (*unew)[nx][ny] = (double (*)[nx][ny])unew_;
++    double **f = f_;
++    double **u = u_;
++    double **unew = unew_;
+ 
+ #pragma omp parallel shared (u, unew, f) private (i, j, it) firstprivate(nx, ny, dx, dy, itold, itnew)
+ #pragma omp single
+@@ -19,7 +19,7 @@ void sweep (int nx, int ny, double dx, double dy, double *f_,
+             for (i = 0; i < nx; i++) {
+ #pragma omp task shared(u, unew) firstprivate(i) private(j) depend(in: unew[i]) depend(out: u[i])
+                 for (j = 0; j < ny; j++) {
+-                    (*u)[i][j] = (*unew)[i][j];
++                    u[i][j] = unew[i][j];
+                 }
+             }
+             // Compute a new estimate.
+@@ -27,11 +27,11 @@ void sweep (int nx, int ny, double dx, double dy, double *f_,
+ #pragma omp task shared(u, unew, f) firstprivate(i, nx, ny, dx, dy) private(j) depend(in: f[i], u[i-1], u[i], u[i+1]) depend(out: unew[i])
+                 for (j = 0; j < ny; j++) {
+                     if (i == 0 || j == 0 || i == nx - 1 || j == ny - 1) {
+-                        (*unew)[i][j] = (*f)[i][j];
++                        unew[i][j] = f[i][j];
+                     } else {
+-                        (*unew)[i][j] = 0.25 * ((*u)[i-1][j] + (*u)[i][j+1]
+-                                              + (*u)[i][j-1] + (*u)[i+1][j]
+-                                              + (*f)[i][j] * dx * dy);
++                        unew[i][j] = 0.25 * (u[i-1][j] + u[i][j+1]
++                                              + u[i][j-1] + u[i+1][j]
++                                              + f[i][j] * dx * dy);
+                     }
+                 }
+             }
+diff --git a/jacobi/src/jacobi-task.c b/jacobi/src/jacobi-task.c
+index 140ea48..897656d 100644
+--- a/jacobi/src/jacobi-task.c
++++ b/jacobi/src/jacobi-task.c
+@@ -1,15 +1,15 @@
+ # include "poisson.h"
+ 
+ /* #pragma omp task/taskwait version of SWEEP. */
+-void sweep (int nx, int ny, double dx, double dy, double *f_,
+-        int itold, int itnew, double *u_, double *unew_, int block_size)
++void sweep (int nx, int ny, double dx, double dy, double **f_,
++        int itold, int itnew, double **u_, double **unew_, int block_size)
+ {
+     int i;
+     int it;
+     int j;
+-    double (*f)[nx][ny] = (double (*)[nx][ny])f_;
+-    double (*u)[nx][ny] = (double (*)[nx][ny])u_;
+-    double (*unew)[nx][ny] = (double (*)[nx][ny])unew_;
++    double **f = f_;
++    double **u = u_;
++    double **unew = unew_;
+ 
+ #pragma omp parallel shared (f, u, unew) private (i, it, j) firstprivate(nx, ny, dx, dy, itold, itnew)
+ #pragma omp single
+@@ -19,7 +19,7 @@ void sweep (int nx, int ny, double dx, double dy, double *f_,
+             for (i = 0; i < nx; i++) {
+ #pragma omp task firstprivate(i, ny) private(j) shared(u, unew)
+                 for (j = 0; j < ny; j++) {
+-                    (*u)[i][j] = (*unew)[i][j];
++                    u[i][j] = unew[i][j];
+                 }
+             }
+ #pragma omp taskwait
+@@ -28,11 +28,11 @@ void sweep (int nx, int ny, double dx, double dy, double *f_,
+ #pragma omp task firstprivate(i, dx, dy, nx, ny) private(j) shared(u, unew, f)
+                 for (j = 0; j < ny; j++) {
+                     if (i == 0 || j == 0 || i == nx - 1 || j == ny - 1) {
+-                        (*unew)[i][j] = (*f)[i][j];
++                        unew[i][j] = f[i][j];
+                     } else {
+-                        (*unew)[i][j] = 0.25 * ((*u)[i-1][j] + (*u)[i][j+1]
+-                                                + (*u)[i][j-1] + (*u)[i+1][j]
+-                                                + (*f)[i][j] * dx * dy);
++                        unew[i][j] = 0.25 * (u[i-1][j] + u[i][j+1]
++                                                + u[i][j-1] + u[i+1][j]
++                                                + f[i][j] * dx * dy);
+                     }
+                 }
+             }
+diff --git a/jacobi/src/poisson.c b/jacobi/src/poisson.c
+index 2f1379d..271ae8b 100644
+--- a/jacobi/src/poisson.c
++++ b/jacobi/src/poisson.c
+@@ -13,8 +13,8 @@
+ # include "timer.h"
+ 
+ 
+-double r8mat_rms(int nx, int ny, double *a_);
+-void rhs(int nx, int ny, double *f_, int block_size);
++double r8mat_rms(int nx, int ny, double **a);
++void rhs(int nx, int ny, double **f, int block_size);
+ void timestamp(void);
+ double u_exact(double x, double y);
+ double uxxyy_exact(double x, double y);
+@@ -89,11 +89,14 @@ double run(struct user_parameters* params)
+     int jj,j;
+     int nx = matrix_size;
+     int ny = matrix_size;
+-    double *f_ = malloc(nx * nx * sizeof(double));
+-    double (*f)[nx][ny] = (double (*)[nx][ny])f_;
+-    double *u_ = malloc(nx * nx * sizeof(double));
+-    double *unew_ = malloc(nx * ny * sizeof(double));
+-    double (*unew)[nx][ny] = (double (*)[nx][ny])unew_;
++    double **f = (double **)malloc(nx * sizeof(double *));
++    double **u = (double **)malloc(nx * sizeof(double *));
++    double **unew = (double **)malloc(nx * sizeof(double *));
++    for(int i = 0; i < nx; i++) {
++      f[i] = (double *)malloc(ny * sizeof(double));
++      u[i] = (double *)malloc(ny * sizeof(double));
++      unew[i] = (double *)malloc(ny * sizeof(double));
++    }
+ 
+     /* test if valid */
+     if ( (nx % block_size) || (ny % block_size) )
+@@ -110,7 +113,7 @@ double run(struct user_parameters* params)
+ 
+ 
+     // Set the right hand side array F.
+-    rhs(nx, ny, f_, block_size);
++    rhs(nx, ny, f, block_size);
+ 
+     /*
+        Set the initial solution estimate UNEW.
+@@ -126,18 +129,18 @@ double run(struct user_parameters* params)
+                     for (ii=i; ii<i+block_size; ++ii)
+                     {
+                         if (ii == 0 || ii == nx - 1 || jj == 0 || jj == ny - 1) {
+-                            (*unew)[ii][jj] = (*f)[ii][jj];
++                            unew[ii][jj] = f[ii][jj];
+                         } else {
+-                            (*unew)[ii][jj] = 0.0;
++                            unew[ii][jj] = 0.0;
+                         }
+                     }
+ 
+     /// KERNEL INTENSIVE COMPUTATION
+     START_TIMER;
+ #ifndef _OPENMP
+-    sweep_seq(nx, ny, dx, dy, f_, 0, niter, u_, unew_);
++    sweep_seq(nx, ny, dx, dy, f, 0, niter, u, unew);
+ #else
+-    sweep(nx, ny, dx, dy, f_, 0, niter, u_, unew_, block_size);
++    sweep(nx, ny, dx, dy, f, 0, niter, u, unew, block_size);
+ #endif
+     END_TIMER;
+ 
+@@ -145,22 +148,24 @@ double run(struct user_parameters* params)
+     if(params->check) {
+         double x;
+         double y;
+-        double *udiff_ = malloc(nx * ny * sizeof(double));
+-        double (*udiff)[nx][ny] = (double (*)[nx][ny])udiff_;
++        double **udiff = (double **)malloc(nx * sizeof(double*));
++        for(int i = 0; i < nx; i++) {
++          udiff[i] = (double *)malloc(ny * sizeof(double));
++        }
+         /// CHECK OUTPUT
+         // Check for convergence.
+         for (j = 0; j < ny; j++) {
+             y = (double) (j) / (double) (ny - 1);
+             for (i = 0; i < nx; i++) {
+                 x = (double) (i) / (double) (nx - 1);
+-                (*udiff)[i][j] = (*unew)[i][j] - u_exact(x, y);
++                udiff[i][j] = unew[i][j] - u_exact(x, y);
+             }
+         }
+-        error = r8mat_rms(nx, ny, udiff_);
++        error = r8mat_rms(nx, ny, udiff);
+ 
+         double error1;
+         // Set the right hand side array F.
+-        rhs(nx, ny, f_, block_size);
++        rhs(nx, ny, f, block_size);
+ 
+         /*
+            Set the initial solution estimate UNEW.
+@@ -169,40 +174,47 @@ double run(struct user_parameters* params)
+         for (j = 0; j < ny; j++) {
+             for (i = 0; i < nx; i++) {
+                 if (i == 0 || i == nx - 1 || j == 0 || j == ny - 1) {
+-                    (*unew)[i][j] = (*f)[i][j];
++                    unew[i][j] = f[i][j];
+                 } else {
+-                    (*unew)[i][j] = 0.0;
++                    unew[i][j] = 0.0;
+                 }
+             }
+         }
+ 
+-        sweep_seq(nx, ny, dx, dy, f_, 0, niter, u_, unew_);
++        sweep_seq(nx, ny, dx, dy, f, 0, niter, u, unew);
+ 
+         // Check for convergence.
+         for (j = 0; j < ny; j++) {
+             y = (double) (j) / (double) (ny - 1);
+             for (i = 0; i < nx; i++) {
+                 x = (double) (i) / (double) (nx - 1);
+-                (*udiff)[i][j] = (*unew)[i][j] - u_exact(x, y);
++                udiff[i][j] = unew[i][j] - u_exact(x, y);
+             }
+         }
+-        error1 = r8mat_rms(nx, ny, udiff_);
++        error1 = r8mat_rms(nx, ny, udiff);
+         params->succeed = fabs(error - error1) < 1.0E-6;
+-        free(udiff_);
++        for(int i = 0; i < nx; i++) {
++          free(udiff[i]);
++        }
++        free(udiff);
+     }
+ #else
+     params->succeed = 1;
+     (void)error;
+ #endif
+-    free(f_);
+-    free(u_);
+-    free(unew_);
++    for(int i = 0; i < nx; i++) {
++      free(f[i]);
++      free(u[i]);
++      free(unew[i]);
++    }
++    free(f);
++    free(u);
++    free(unew);
+     return TIMER;
+ }
+ 
+ /* R8MAT_RMS returns the RMS norm of a vector stored as a matrix. */
+-double r8mat_rms(int nx, int ny, double *a_) {
+-    double (*a)[nx][ny] = (double (*)[nx][ny])a_;
++double r8mat_rms(int nx, int ny, double **a) {
+     int i;
+     int j;
+     double v;
+@@ -211,7 +223,7 @@ double r8mat_rms(int nx, int ny, double *a_) {
+ 
+     for (j = 0; j < ny; j++) {
+         for (i = 0; i < nx; i++) {
+-            v = v + (*a)[i][j] * (*a)[i][j];
++            v = v + a[i][j] * a[i][j];
+         }
+     }
+     v = sqrt(v / (double) (nx * ny));
+@@ -220,9 +232,8 @@ double r8mat_rms(int nx, int ny, double *a_) {
+ }
+ 
+ /* RHS initializes the right hand side "vector". */
+-void rhs(int nx, int ny, double *f_, int block_size)
++void rhs(int nx, int ny, double **f, int block_size)
+ {
+-    double (*f)[nx][ny] = (double (*)[nx][ny])f_;
+     int i,ii;
+     int j,jj;
+     double x;
+@@ -244,9 +255,9 @@ void rhs(int nx, int ny, double *f_, int block_size)
+                 {
+                     x = (double) (ii) / (double) (nx - 1);
+                     if (ii == 0 || ii == nx - 1 || jj == 0 || jj == ny - 1)
+-                        (*f)[ii][jj] = u_exact(x, y);
++                        f[ii][jj] = u_exact(x, y);
+                     else
+-                        (*f)[ii][jj] = - uxxyy_exact(x, y);
++                        f[ii][jj] = - uxxyy_exact(x, y);
+                 }
+             }
+ }
+@@ -270,4 +281,3 @@ double uxxyy_exact(double x, double y) {
+ 
+     return value;
+ }
+-
+diff --git a/plasma/include/core_blas.h b/plasma/include/core_blas.h
+index c6a1e77..c3c1b6b 100644
+--- a/plasma/include/core_blas.h
++++ b/plasma/include/core_blas.h
+@@ -43,10 +43,10 @@ extern char *plasma_lapack_constants[];
+   /*
+    * CBlas enum
+    */
+-#define CBLAS_TRANSPOSE int
+-#define CBLAS_UPLO      int
+-#define CBLAS_DIAG      int
+-#define CBLAS_SIDE      int
++//#define CBLAS_TRANSPOSE int
++//#define CBLAS_UPLO      int
++//#define CBLAS_DIAG      int
++//#define CBLAS_SIDE      int
+ //#define CBLAS_TRANSPOSE enum CBLAS_TRANSPOSE
+ //#define CBLAS_UPLO      enum CBLAS_UPLO
+ //#define CBLAS_DIAG      enum CBLAS_DIAG
+diff --git a/plasma/src/core_dgeqrt.c b/plasma/src/core_dgeqrt.c
+index 2754132..30ab58e 100644
+--- a/plasma/src/core_dgeqrt.c
++++ b/plasma/src/core_dgeqrt.c
+@@ -83,10 +83,10 @@
+  *          \retval <0 if -i, the i-th argument had an illegal value
+  *
+  ******************************************************************************/
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dgeqrt = PCORE_dgeqrt
+-#define CORE_dgeqrt PCORE_dgeqrt
+-#endif
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dgeqrt = PCORE_dgeqrt
++//#define CORE_dgeqrt PCORE_dgeqrt
++//#endif
+ int CORE_dgeqrt(int M, int N, int IB,
+                 double *A, int LDA,
+                 double *T, int LDT,
+diff --git a/plasma/src/core_dgetrf_rectil.c b/plasma/src/core_dgetrf_rectil.c
+index 6f0c56b..e62e251 100644
+--- a/plasma/src/core_dgetrf_rectil.c
++++ b/plasma/src/core_dgetrf_rectil.c
+@@ -108,10 +108,10 @@ CORE_dgetrf_rectil_update(const PLASMA_desc A, int *IPIV,
+  *                  to solve a system of equations.
+  *
+  */
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dgetrf_rectil = PCORE_dgetrf_rectil
+-#define CORE_dgetrf_rectil PCORE_dgetrf_rectil
+-#endif
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dgetrf_rectil = PCORE_dgetrf_rectil
++//#define CORE_dgetrf_rectil PCORE_dgetrf_rectil
++//#endif
+ int CORE_dgetrf_rectil(const PLASMA_desc A, int *IPIV, int *info)
+ {
+     int ft, lt;
+diff --git a/plasma/src/core_dlaswp.c b/plasma/src/core_dlaswp.c
+index b70a93e..9bffad7 100644
+--- a/plasma/src/core_dlaswp.c
++++ b/plasma/src/core_dlaswp.c
+@@ -57,10 +57,10 @@
+  *
+  *******************************************************************************
+  */
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dlaswp_ontile = PCORE_dlaswp_ontile
+-#define CORE_dlaswp_ontile PCORE_dlaswp_ontile
+-#endif
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dlaswp_ontile = PCORE_dlaswp_ontile
++//#define CORE_dlaswp_ontile PCORE_dlaswp_ontile
++//#endif
+ int CORE_dlaswp_ontile(PLASMA_desc descA, int i1, int i2, const int *ipiv, int inc)
+ {
+     int i, j, ip, it;
+@@ -174,10 +174,10 @@ int CORE_dlaswp_ontile(PLASMA_desc descA, int i1, int i2, const int *ipiv, int i
+  *
+  *******************************************************************************
+  */
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dswptr_ontile = PCORE_dswptr_ontile
+-#define CORE_dswptr_ontile PCORE_dswptr_ontile
+-#endif
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dswptr_ontile = PCORE_dswptr_ontile
++//#define CORE_dswptr_ontile PCORE_dswptr_ontile
++//#endif
+ int CORE_dswptr_ontile(PLASMA_desc descA, int i1, int i2, const int *ipiv, int inc,
+                        const double *Akk, int ldak)
+ {
+diff --git a/plasma/src/core_dormqr.c b/plasma/src/core_dormqr.c
+index 4b35a94..874153c 100644
+--- a/plasma/src/core_dormqr.c
++++ b/plasma/src/core_dormqr.c
+@@ -105,10 +105,10 @@
+  *          \retval <0 if -i, the i-th argument had an illegal value
+  *
+  ******************************************************************************/
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dormqr = PCORE_dormqr
+-#define CORE_dormqr PCORE_dormqr
+-#endif
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dormqr = PCORE_dormqr
++//#define CORE_dormqr PCORE_dormqr
++//#endif
+ int CORE_dormqr(PLASMA_enum side, PLASMA_enum trans,
+                 int M, int N, int K, int IB,
+                 const double *A, int LDA,
+diff --git a/plasma/src/core_dplgsy.c b/plasma/src/core_dplgsy.c
+index c368b7d..70a7eca 100644
+--- a/plasma/src/core_dplgsy.c
++++ b/plasma/src/core_dplgsy.c
+@@ -65,10 +65,10 @@
+  *         all tiles initialized with this routine.
+  *
+  ******************************************************************************/
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dplgsy = PCORE_dplgsy
+-#define CORE_dplgsy PCORE_dplgsy
+-#endif
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dplgsy = PCORE_dplgsy
++//#define CORE_dplgsy PCORE_dplgsy
++//#endif
+ void CORE_dplgsy( double bump, int m, int n, double *A, int lda,
+                   int gM, int m0, int n0, unsigned long long int seed )
+ {
+diff --git a/plasma/src/core_dplrnt.c b/plasma/src/core_dplrnt.c
+index 2814651..6c83858 100644
+--- a/plasma/src/core_dplrnt.c
++++ b/plasma/src/core_dplrnt.c
+@@ -61,10 +61,10 @@
+  *         all tiles initialized with this routine.
+  *
+  ******************************************************************************/
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dplrnt = PCORE_dplrnt
+-#define CORE_dplrnt PCORE_dplrnt
+-#endif
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dplrnt = PCORE_dplrnt
++//#define CORE_dplrnt PCORE_dplrnt
++//#endif
+ void CORE_dplrnt( int m, int n, double *A, int lda,
+                   int gM, int m0, int n0, unsigned long long int seed )
+ {
+diff --git a/plasma/src/core_dtsmqr.c b/plasma/src/core_dtsmqr.c
+index 83ed370..4d4fb1e 100644
+--- a/plasma/src/core_dtsmqr.c
++++ b/plasma/src/core_dtsmqr.c
+@@ -117,10 +117,10 @@
+  *          \retval <0 if -i, the i-th argument had an illegal value
+  *
+  ******************************************************************************/
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dtsmqr = PCORE_dtsmqr
+-#define CORE_dtsmqr PCORE_dtsmqr
+-#endif
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dtsmqr = PCORE_dtsmqr
++//#define CORE_dtsmqr PCORE_dtsmqr
++//#endif
+ int CORE_dtsmqr(PLASMA_enum side, PLASMA_enum trans,
+                 int M1, int N1, int M2, int N2, int K, int IB,
+                 double *A1, int LDA1,
+diff --git a/plasma/src/core_dtsqrt.c b/plasma/src/core_dtsqrt.c
+index 667bc28..2f495c6 100644
+--- a/plasma/src/core_dtsqrt.c
++++ b/plasma/src/core_dtsqrt.c
+@@ -85,10 +85,10 @@
+  *          \retval <0 if -i, the i-th argument had an illegal value
+  *
+  ******************************************************************************/
+-#if defined(PLASMA_HAVE_WEAK)
+-#pragma weak CORE_dtsqrt = PCORE_dtsqrt
+-#define CORE_dtsqrt PCORE_dtsqrt
+-#define CORE_dtsmqr PCORE_dtsmqr
++//#if defined(PLASMA_HAVE_WEAK)
++//#pragma weak CORE_dtsqrt = PCORE_dtsqrt
++//#define CORE_dtsqrt PCORE_dtsqrt
++//#define CORE_dtsmqr PCORE_dtsmqr
+ int  CORE_dtsmqr(PLASMA_enum side, PLASMA_enum trans,
+                  int M1, int N1, int M2, int N2, int K, int IB,
+                  double *A1, int LDA1,
+@@ -96,7 +96,7 @@ int  CORE_dtsmqr(PLASMA_enum side, PLASMA_enum trans,
+                  const double *V, int LDV,
+                  const double *T, int LDT,
+                  double *WORK, int LDWORK);
+-#endif
++//#endif
+ 
+ int CORE_dtsqrt(int M, int N, int IB,
+                 double *A1, int LDA1,
+diff --git a/plasma/src/time_dgeqrf-task.c b/plasma/src/time_dgeqrf-task.c
+index a80ac0d..fabcdb8 100644
+--- a/plasma/src/time_dgeqrf-task.c
++++ b/plasma/src/time_dgeqrf-task.c
+@@ -38,7 +38,7 @@ RunTest(real_Double_t *t_, struct user_parameters* params)
+     double *A = NULL;
+     if ( check ) {
+         A = (double*)malloc(N * N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descA, (void*)A, N);
++        plasma_pdtile_to_lapack_quark(*descA, A, N);
+     }
+ 
+     /* Allocate Workspace */
+@@ -62,14 +62,14 @@ RunTest(real_Double_t *t_, struct user_parameters* params)
+         /* Initialize and save B */
+         plasma_pdpltmg_seq(*descB, 2264 );
+         double *B = (double*)malloc(N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descB, (void*)B, N);
++        plasma_pdtile_to_lapack_quark(*descB, B, N);
+ 
+         /* Compute the solution */
+         PLASMA_dgeqrs_Tile( descA, descT, descB , IB);
+ 
+         /* Copy solution to X */
+         double *X = (double*)malloc(N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descB, (void*)X, N);
++        plasma_pdtile_to_lapack_quark(*descB, X, N);
+ 
+         check_res = d_check_solution(N, N, 1, A, N, B, X, N);
+ 
+diff --git a/plasma/src/time_dgetrf-task.c b/plasma/src/time_dgetrf-task.c
+index a7e4efb..3df5e09 100644
+--- a/plasma/src/time_dgetrf-task.c
++++ b/plasma/src/time_dgetrf-task.c
+@@ -25,7 +25,7 @@ RunTest(real_Double_t *t_, struct user_parameters* params)
+ 
+     /* Allocate Data */
+     PLASMA_desc *descA = NULL;
+-    double* ptr = malloc(N * N * sizeof(double));
++    double* ptr = (double *)malloc(N * N * sizeof(double));
+     PLASMA_Desc_Create(&descA, ptr, PlasmaRealDouble, NB, NB, NB*NB, N, N, 0, 0, N, N);
+ 
+     int* piv = (int*)malloc(N * sizeof(double));
+@@ -38,7 +38,7 @@ RunTest(real_Double_t *t_, struct user_parameters* params)
+     double *A = NULL;
+     if(check) {
+         A = (double*)malloc(N * N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descA, (void*)A, N);
++        plasma_pdtile_to_lapack_quark(*descA, A, N);
+     }
+ 
+     START_TIMING();
+@@ -56,12 +56,12 @@ RunTest(real_Double_t *t_, struct user_parameters* params)
+ 
+         plasma_pdpltmg_seq(*descB, 7732 );
+         double* b = (double*)malloc(N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descB, (void*)b, N);
++        plasma_pdtile_to_lapack_quark(*descB, b, N);
+ 
+         PLASMA_dgetrs_Tile( PlasmaNoTrans, descA, piv, descB );
+ 
+         double* x = (double*)malloc(N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descB, (void*)x, N);
++        plasma_pdtile_to_lapack_quark(*descB, x, N);
+ 
+         check_res = d_check_solution(N, N, 1, A, N, b, x, N);
+ 
+diff --git a/plasma/src/time_dpotrf-task.c b/plasma/src/time_dpotrf-task.c
+index bbdf1d7..ebace82 100644
+--- a/plasma/src/time_dpotrf-task.c
++++ b/plasma/src/time_dpotrf-task.c
+@@ -28,7 +28,7 @@ RunTest(real_Double_t *t_, struct user_parameters* params)
+ 
+     /* Allocate Data */
+     PLASMA_desc *descA = NULL;
+-    double* ptr = malloc(N * N * sizeof(double));
++    double* ptr = (double *)malloc(N * N * sizeof(double));
+     PLASMA_Desc_Create(&descA, ptr, PlasmaRealDouble, NB, NB, NB*NB, N, N, 0, 0, N, N);
+ 
+ #pragma omp parallel
+@@ -39,7 +39,7 @@ RunTest(real_Double_t *t_, struct user_parameters* params)
+     double *A = NULL;
+     if(check) {
+         A = (double*)malloc(N * N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descA, (void*)A, N);
++        plasma_pdtile_to_lapack_quark(*descA, A, N);
+     }
+ 
+     /* PLASMA DPOSV */
+@@ -58,12 +58,12 @@ RunTest(real_Double_t *t_, struct user_parameters* params)
+ 
+         plasma_pdpltmg_seq(* descB, 7672 );
+         double* B = (double*)malloc(N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descB, (void*)B, N);
++        plasma_pdtile_to_lapack_quark(*descB,B, N);
+ 
+         PLASMA_dpotrs_Tile( uplo, descA, descB );
+ 
+         double* X = (double*)malloc(N * sizeof(double));
+-        plasma_pdtile_to_lapack_quark(*descB, (void*)X, N);
++        plasma_pdtile_to_lapack_quark(*descB, X, N);
+ 
+         check_res = d_check_solution(N, N, 1, A, N, B, X, N);
+ 
+diff --git a/strassen/src/strassen-seq.c b/strassen/src/strassen-seq.c
+index 95fe090..1aa4c74 100644
+--- a/strassen/src/strassen-seq.c
++++ b/strassen/src/strassen-seq.c
+@@ -102,7 +102,7 @@ static void OptimizedStrassenMultiply_seq(double *C, double *A, double *B, unsig
+     C22 = C21 + QuadrantSize;
+ 
+     /* Allocate Heap Space Here */
+-    StartHeap = Heap = malloc(QuadrantSizeInBytes * NumberOfVariables);
++    StartHeap = Heap = (char *)malloc(QuadrantSizeInBytes * NumberOfVariables);
+ 
+     /* Distribute the heap space over the variables */
+     S1 = (double*) Heap; Heap += QuadrantSizeInBytes;
+diff --git a/strassen/src/strassen-task-dep.c b/strassen/src/strassen-task-dep.c
+index 9b1eb38..68f2044 100644
+--- a/strassen/src/strassen-task-dep.c
++++ b/strassen/src/strassen-task-dep.c
+@@ -103,7 +103,7 @@ static void OptimizedStrassenMultiply_par(double *C, double *A, double *B,
+   C22 = C21 + QuadrantSize;
+ 
+   /* Allocate Heap Space Here */
+-  StartHeap = Heap = malloc(QuadrantSizeInBytes * NumberOfVariables);
++  StartHeap = Heap = (char *)malloc(QuadrantSizeInBytes * NumberOfVariables);
+ 
+   /* Distribute the heap space over the variables */
+   S1 = (double*) Heap; Heap += QuadrantSizeInBytes;
+diff --git a/strassen/src/strassen-task.c b/strassen/src/strassen-task.c
+index 5dfde2c..bf943df 100644
+--- a/strassen/src/strassen-task.c
++++ b/strassen/src/strassen-task.c
+@@ -103,7 +103,7 @@ static void OptimizedStrassenMultiply_par(double *C, double *A, double *B,
+   C22 = C21 + QuadrantSize;
+ 
+   /* Allocate Heap Space Here */
+-  StartHeap = Heap = malloc(QuadrantSizeInBytes * NumberOfVariables);
++  StartHeap = Heap = (char *)malloc(QuadrantSizeInBytes * NumberOfVariables);
+ 
+   /* Distribute the heap space over the variables */
+   S1 = (double*) Heap; Heap += QuadrantSizeInBytes;
